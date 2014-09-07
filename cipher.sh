@@ -3,7 +3,7 @@
 COMMAND=$1
 PACKAGE=$2
 if [ ! -z "${PACKAGE}" ]; then
-    FILE="${FILE}.tar.gz"
+    FILE="${PACKAGE}.tar.gz"
 fi
 
 ENCRYPTED=~/encrypted
