@@ -1,4 +1,4 @@
-#!/bin/bash -xe
+#!/bin/bash -e
 
 COMMAND=$1
 PACKAGE=$2
@@ -30,7 +30,7 @@ is_mounted ()
             echo $(df "${mount_point}" 2>/dev/null | tail -1 | grep "${mount_point}" | awk '{ print $9 }')
             ;;
         "linux-gnu")
-            test -d /dev/shm/"${mount_point}"
+            test -d /dev/shm/"${mount_point}" && echo "mounted"
             ;;
     esac
 }
@@ -178,6 +178,7 @@ encrypt() {
     file_name=${DECRYPTED%%/}/${PACKAGE}
     output1=${ENCRYPTED%%/}/${PACKAGE}.tar.gz.gpg
     output2=${ENCRYPTED%%/}/${PACKAGE}.tar.gz.enc
+    mkdir -p ${ENCRYPTED}
     if [ -f ${output1} ]; then
         read -p "Overwrite existing ${output1}? [Y/N]: " -n 1 -r
         echo
