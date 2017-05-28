@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -xe
 
 COMMAND=$1
 PACKAGE=$2
@@ -25,7 +25,14 @@ usage ()
 is_mounted ()
 {
     mount_point=${1}
-    echo $(df "${mount_point}" 2>/dev/null | tail -1 | grep "${mount_point}" | awk '{ print $9 }')
+    case "$OSTYPE" in
+        "darwin*")
+            echo $(df "${mount_point}" 2>/dev/null | tail -1 | grep "${mount_point}" | awk '{ print $9 }')
+            ;;
+        "linux-gnu")
+            test -d /dev/shm/"${mount_point}"
+            ;;
+    esac
 }
 
 mountfs_mac () 
@@ -58,6 +65,29 @@ mountfs_mac ()
     fi
 }
 
+mountfs_linux () 
+{
+    mount_point=${1}
+    size=${2:-64}
+
+    if [[ -e "$mount_point" ]]; then
+        echo "Mount point target $mount_point is present, unable to proceed." >&2
+        exit 1
+    fi
+
+    if [[ -d /dev/shm/"$mount_point" ]]; then
+        echo "Directory "$mount_point" on /dev/shm is present, unable to proceed." >&2
+        exit 1
+    fi
+
+    location=/dev/shm/"${mount_point}"
+    mkdir -p $location
+    chown $(id -un):$(id -gn) $location
+    chmod 0700 $location
+    ln -s $location ${mount_point}
+}
+
+
 mountfs() {
     mount_point=${1}
     if [ ! -z $(is_mounted ${mount_point}) ]; then
@@ -67,6 +97,8 @@ mountfs() {
     size=${2}
     if [[ "$OSTYPE" == "darwin"* ]]; then
         mountfs_mac "${mount_point}" $size
+    elif [[ "$OSTYPE" == "linux-gnu" ]]; then
+        mountfs_linux "${mount_point}" $size
     else
         echo "Unknown OS." >&2
         exit 1
@@ -111,10 +143,31 @@ umountfs_mac ()
     hdiutil detach -quiet $device_name
 }
 
+umountfs_linux ()
+{
+    mount_point=${1}
+    if [[ ! -L "${mount_point}" ]]; then
+        echo "The mount point is not a symlink to ram location, unable to proceed." >&2
+        exit 1
+    fi
+    if [[ ! -d "${mount_point}" ]]; then
+        echo "The mount point does not link to directory." 2>&1
+        exit 1
+    fi
+
+    location=$(readlink -e $mount_point)
+
+    rm -f "${mount_point}"
+    find "$location" -type f -exec shred -z {} \;
+    rm -rf "$location"
+}
+
 umountfs() {
     mount_point=${1}
     if [[ "$OSTYPE" == "darwin"* ]]; then
         umountfs_mac "${mount_point}"
+    elif [[ "$OSTYPE" == "linux-gnu" ]]; then
+        umountfs_linux "${mount_point}"
     else
         echo "Unknown OS." >&2
         exit 1
