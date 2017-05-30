@@ -2,9 +2,6 @@
 
 COMMAND=$1
 PACKAGE=$2
-if [ ! -z "${PACKAGE}" ]; then
-    FILE="${PACKAGE}.tar.gz"
-fi
 
 ENCRYPTED=~/encrypted
 DECRYPTED=~/decrypted
@@ -106,17 +103,25 @@ mountfs() {
 }
 
 decrypt() {
-    if [ -z "${PACKAGE}" ]; then
+    if [[ -z "${PACKAGE}" ]]; then
         echo "Missing package name." >&2
         usage
         exit 1
     fi
-    if [ -z $(is_mounted ${DECRYPTED}) ]; then
+    if [[ -z $(is_mounted ${DECRYPTED}) ]]; then
         echo "${DECRYPTED} not mounted."
         exit 1
     fi
-    file_name=${ENCRYPTED%%/}/${FILE}.gpg
-    gpg --decrypt "${file_name}" | tar -x -z -C "${DECRYPTED}"
+    if [[ -f "${PACKAGE}.gpg" ]]; then
+        file_name="${ENCRYPTED%%/}/${PACKAGE}.gpg"
+        gpg --decrypt "${file_name}" > "${DECRYPTED%%/}/${PACKAGE}"
+    elif [[ -d "${PACKAGE}.tar.gz.gpg" ]]; then
+        file_name="${ENCRYPTED%%/}/${PACKAGE}.tar.gz.gpg"
+        gpg --decrypt "${file_name}" | tar -x -z -C "${DECRYPTED}"
+    else
+        echo "Cannot find package ${PACKAGE}"
+        exit 1
+    fi
 }
 
 umountfs_mac ()
@@ -174,20 +179,49 @@ umountfs() {
     fi
 }
 
+overwrite_prompt () {
+    f=${1}
+    if [[ -e "${f}" ]]; then
+        read -p "Overwrite existing ${f}? [Y/N]: " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Y]$ ]]; then
+            return 0
+        else
+            return 1
+        fi
+    else
+        return 0
+    fi
+}
+
 encrypt() {
     file_name=${DECRYPTED%%/}/${PACKAGE}
-    output1=${ENCRYPTED%%/}/${PACKAGE}.tar.gz.gpg
-    output2=${ENCRYPTED%%/}/${PACKAGE}.tar.gz.enc
-    mkdir -p ${ENCRYPTED}
-    if [ -f ${output1} ]; then
-        read -p "Overwrite existing ${output1}? [Y/N]: " -n 1 -r
-        echo
-        if ! [[ $REPLY =~ ^[Y]$ ]]; then
-            exit 0
+    if [[ -f "${file_name}" ]]; then
+        output1="${ENCRYPTED%%/}/${PACKAGE}.gpg"
+        if overwrite_prompt "${output1}"; then
+            mkdir -p "${ENCRYPTED}"
+            cat "${file_name}" | gpg --cipher-algo AES256 --symmetric > "${output1}"
         fi
+        output2="${ENCRYPTED%%/}/${PACKAGE}.enc"
+        if overwrite_prompt "${output2}"; then
+            mkdir -p "${ENCRYPTED}"
+            cat "${file_name}" | openssl enc -aes-256-cbc -salt -out "${output2}"
+        fi
+    elif [[ -d "${file_name}" ]]; then
+        output1="${ENCRYPTED%%/}/${PACKAGE}.tar.gz.gpg"
+        if overwrite_prompt "${output1}"; then
+            mkdir -p "${ENCRYPTED}"
+            tar -c -z -C ${DECRYPTED} "${PACKAGE}" | gpg --cipher-algo AES256 --symmetric > "${output1}"
+        fi
+        output2="${ENCRYPTED%%/}/${PACKAGE}.tar.gz.enc"
+        if overwrite_prompt "${output2}"; then
+            mkdir -p "${ENCRYPTED}"
+            tar -c -z -C ${DECRYPTED} "${PACKAGE}" | openssl enc -aes-256-cbc -salt -out "${output2}"
+        fi
+    else
+        echo "Cannot find package ${file_name}"
+        exit 1
     fi
-    tar -c -z -C ${DECRYPTED} "${PACKAGE}" | gpg --cipher-algo AES256 --symmetric > "${output1}"
-    tar -c -z -C ${DECRYPTED} "${PACKAGE}" | openssl enc -aes-256-cbc -salt -out "${output2}"
 }
 
 case "$COMMAND" in
