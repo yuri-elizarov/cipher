@@ -112,11 +112,12 @@ decrypt() {
         echo "${DECRYPTED} not mounted."
         exit 1
     fi
-    if [[ -f "${PACKAGE}.gpg" ]]; then
-        file_name="${ENCRYPTED%%/}/${PACKAGE}.gpg"
+    package_base="${ENCRYPTED%%/}/${PACKAGE}"
+    if [[ -f "${package_base}.gpg" ]]; then
+        file_name="${package_base}.gpg"
         gpg --decrypt "${file_name}" > "${DECRYPTED%%/}/${PACKAGE}"
-    elif [[ -d "${PACKAGE}.tar.gz.gpg" ]]; then
-        file_name="${ENCRYPTED%%/}/${PACKAGE}.tar.gz.gpg"
+    elif [[ -d "${package_base}.tar.gz.gpg" ]]; then
+        file_name="${package_base}.tar.gz.gpg"
         gpg --decrypt "${file_name}" | tar -x -z -C "${DECRYPTED}"
     else
         echo "Cannot find package ${PACKAGE}"
