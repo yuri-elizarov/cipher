@@ -23,11 +23,11 @@ is_mounted ()
 {
     mount_point=${1}
     case "$OSTYPE" in
-        "darwin*")
-            echo $(df "${mount_point}" 2>/dev/null | tail -1 | grep "${mount_point}" | awk '{ print $9 }')
+        darwin*)
+            df "${mount_point}"  | tail -1 | grep -q "${mount_point}"
             ;;
-        "linux-gnu")
-            test -d /dev/shm/"${mount_point}" && echo "mounted"
+        linux-gnu)
+            test -d /dev/shm/"${mount_point}"
             ;;
     esac
 }
@@ -87,7 +87,7 @@ mountfs_linux ()
 
 mountfs() {
     mount_point=${1}
-    if [ ! -z $(is_mounted ${mount_point}) ]; then
+    if ! is_mounted ${mount_point}; then
         echo "$mount_point already mounted." >&2
         exit 0
     fi
@@ -108,7 +108,7 @@ decrypt() {
         usage
         exit 1
     fi
-    if [[ -z $(is_mounted ${DECRYPTED}) ]]; then
+    if ! is_mounted ${DECRYPTED}; then
         echo "${DECRYPTED} not mounted."
         exit 1
     fi
