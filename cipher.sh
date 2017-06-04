@@ -7,6 +7,16 @@ ENCRYPTED=~/encrypted
 DECRYPTED=~/decrypted
 SIZE=2048
 
+# Since there is a problem with GPG 2 on Mac (see https://github.com/keybase/keybase-issues/issues/1712)
+# lets test for the presense of gpg executable and if use gpg1 if not present
+
+if which gpg; then
+    GPG=$( which gpg )
+else
+    GPG=$( which gpg1 )
+fi
+
+
 usage ()
 {
     echo "Usage:" >&2
@@ -115,10 +125,10 @@ decrypt() {
     package_base="${ENCRYPTED%%/}/${PACKAGE}"
     if [[ -f "${package_base}.gpg" ]]; then
         file_name="${package_base}.gpg"
-        gpg --decrypt "${file_name}" > "${DECRYPTED%%/}/${PACKAGE}"
-    elif [[ -d "${package_base}.tar.gz.gpg" ]]; then
+        $GPG --decrypt "${file_name}" --output "${DECRYPTED%%/}/${PACKAGE}"
+    elif [[ -f "${package_base}.tar.gz.gpg" ]]; then
         file_name="${package_base}.tar.gz.gpg"
-        gpg --decrypt "${file_name}" | tar -x -z -C "${DECRYPTED}"
+        $GPG --decrypt "${file_name}" | tar -x -z -C "${DECRYPTED}"
     else
         echo "Cannot find package ${PACKAGE}"
         exit 1
@@ -201,7 +211,7 @@ encrypt() {
         output1="${ENCRYPTED%%/}/${PACKAGE}.gpg"
         if overwrite_prompt "${output1}"; then
             mkdir -p "${ENCRYPTED}"
-            cat "${file_name}" | gpg --cipher-algo AES256 --symmetric > "${output1}"
+            cat "${file_name}" | $GPG --cipher-algo AES256 --symmetric --output "${output1}"
         fi
         output2="${ENCRYPTED%%/}/${PACKAGE}.enc"
         if overwrite_prompt "${output2}"; then
@@ -212,7 +222,7 @@ encrypt() {
         output1="${ENCRYPTED%%/}/${PACKAGE}.tar.gz.gpg"
         if overwrite_prompt "${output1}"; then
             mkdir -p "${ENCRYPTED}"
-            tar -c -z -C ${DECRYPTED} "${PACKAGE}" | gpg --cipher-algo AES256 --symmetric > "${output1}"
+            tar -c -z -C ${DECRYPTED} "${PACKAGE}" | $GPG --cipher-algo AES256 --symmetric --output "${output1}"
         fi
         output2="${ENCRYPTED%%/}/${PACKAGE}.tar.gz.enc"
         if overwrite_prompt "${output2}"; then
