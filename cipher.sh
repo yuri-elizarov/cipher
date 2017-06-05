@@ -125,7 +125,7 @@ decrypt() {
     package_base="${ENCRYPTED%%/}/${PACKAGE}"
     if [[ -f "${package_base}.gpg" ]]; then
         file_name="${package_base}.gpg"
-        $GPG --decrypt "${file_name}" --output "${DECRYPTED%%/}/${PACKAGE}"
+        $GPG --output "${DECRYPTED%%/}/${PACKAGE}" --decrypt "${file_name}"
     elif [[ -f "${package_base}.tar.gz.gpg" ]]; then
         file_name="${package_base}.tar.gz.gpg"
         $GPG --decrypt "${file_name}" | tar -x -z -C "${DECRYPTED}"
