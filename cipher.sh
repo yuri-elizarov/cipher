@@ -97,7 +97,7 @@ mountfs_linux ()
 
 mountfs() {
     mount_point=${1}
-    if ! is_mounted ${mount_point}; then
+    if is_mounted ${mount_point}; then
         echo "$mount_point already mounted." >&2
         exit 0
     fi
