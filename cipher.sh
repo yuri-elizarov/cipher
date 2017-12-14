@@ -5,6 +5,7 @@ PACKAGE=$2
 
 ENCRYPTED=~/encrypted
 DECRYPTED=~/decrypted
+DROPBOX=~/Dropbox/encrypted
 SIZE=2048
 
 # Since there is a problem with GPG 2 on Mac (see https://github.com/keybase/keybase-issues/issues/1712)
@@ -206,25 +207,42 @@ overwrite_prompt () {
 }
 
 encrypt() {
+    dropbox_name=${DROPBOX%%/}/${PACKAGE}
     file_name=${DECRYPTED%%/}/${PACKAGE}
     if [[ -f "${file_name}" ]]; then
         output1="${ENCRYPTED%%/}/${PACKAGE}.gpg"
+        if cmp -q "${dropbox_name}.gpg" "${output1}"; then
+            echo "${dropbox_name}.gpg and ${output1} differ, aborting"
+            exit 1
+        fi
         if overwrite_prompt "${output1}"; then
             mkdir -p "${ENCRYPTED}"
             cat "${file_name}" | $GPG --cipher-algo AES256 --symmetric --output "${output1}"
         fi
         output2="${ENCRYPTED%%/}/${PACKAGE}.enc"
+        if cmp -q "${dropbox_name}.enc" "${output2}"; then
+            echo "${dropbox_name}.enc and ${output2} differ, aborting"
+            exit 1
+        fi
         if overwrite_prompt "${output2}"; then
             mkdir -p "${ENCRYPTED}"
             cat "${file_name}" | openssl enc -aes-256-cbc -salt -out "${output2}"
         fi
     elif [[ -d "${file_name}" ]]; then
         output1="${ENCRYPTED%%/}/${PACKAGE}.tar.gz.gpg"
+        if cmp -q "${dropbox_name}.tar.gz.gpg" "${output1}"; then
+            echo "${dropbox_name}.tar.gz.gpg and ${output1} differ, aborting"
+            exit 1
+        fi
         if overwrite_prompt "${output1}"; then
             mkdir -p "${ENCRYPTED}"
             tar -c -z -C ${DECRYPTED} "${PACKAGE}" | $GPG --cipher-algo AES256 --symmetric --output "${output1}"
         fi
         output2="${ENCRYPTED%%/}/${PACKAGE}.tar.gz.enc"
+        if cmp -q "${dropbox_name}.tar.gz.enc" "${output2}"; then
+            echo "${dropbox_name}tar.gz.enc and ${output2} differ, aborting"
+            exit 1
+        fi
         if overwrite_prompt "${output2}"; then
             mkdir -p "${ENCRYPTED}"
             tar -c -z -C ${DECRYPTED} "${PACKAGE}" | openssl enc -aes-256-cbc -salt -out "${output2}"
