@@ -216,7 +216,7 @@ overwrite_prompt () {
 check() {
     echo "Checking SHA256 sums of files in ${1}"
     pushd ${1} > /dev/null
-    shasum -c  ${ENCRYPTED%%/}/SHA256SUM
+    shasum -s -c  ${ENCRYPTED%%/}/SHA256SUM
     popd > /dev/null
 }
 
