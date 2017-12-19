@@ -211,7 +211,7 @@ encrypt() {
     file_name=${DECRYPTED%%/}/${PACKAGE}
     if [[ -f "${file_name}" ]]; then
         output1="${ENCRYPTED%%/}/${PACKAGE}.gpg"
-        if cmp -q "${dropbox_name}.gpg" "${output1}"; then
+        if ! cmp --quiet "${dropbox_name}.gpg" "${output1}"; then
             echo "${dropbox_name}.gpg and ${output1} differ, aborting"
             exit 1
         fi
@@ -220,7 +220,7 @@ encrypt() {
             cat "${file_name}" | $GPG --cipher-algo AES256 --symmetric --output "${output1}"
         fi
         output2="${ENCRYPTED%%/}/${PACKAGE}.enc"
-        if cmp -q "${dropbox_name}.enc" "${output2}"; then
+        if ! cmp --quiet "${dropbox_name}.enc" "${output2}"; then
             echo "${dropbox_name}.enc and ${output2} differ, aborting"
             exit 1
         fi
@@ -230,7 +230,7 @@ encrypt() {
         fi
     elif [[ -d "${file_name}" ]]; then
         output1="${ENCRYPTED%%/}/${PACKAGE}.tar.gz.gpg"
-        if cmp -q "${dropbox_name}.tar.gz.gpg" "${output1}"; then
+        if ! cmp --quiet "${dropbox_name}.tar.gz.gpg" "${output1}"; then
             echo "${dropbox_name}.tar.gz.gpg and ${output1} differ, aborting"
             exit 1
         fi
@@ -239,7 +239,7 @@ encrypt() {
             tar -c -z -C ${DECRYPTED} "${PACKAGE}" | $GPG --cipher-algo AES256 --symmetric --output "${output1}"
         fi
         output2="${ENCRYPTED%%/}/${PACKAGE}.tar.gz.enc"
-        if cmp -q "${dropbox_name}.tar.gz.enc" "${output2}"; then
+        if ! cmp --quiet "${dropbox_name}.tar.gz.enc" "${output2}"; then
             echo "${dropbox_name}tar.gz.enc and ${output2} differ, aborting"
             exit 1
         fi
