@@ -157,7 +157,7 @@ umountfs_mac ()
         echo "Disk image is not mounted." >&2
         exit 1
     fi
-    find "${mount_point}"/ -type f -exec gshred -z {} \; || /bin/true 
+    find "${mount_point}"/ -type f -exec gshred -z {} \; || /usr/bin/true 
     umount "${mount_point}"
     if [ $? -ne 0 ]; then
         echo "Could not unmount." >&2
@@ -211,6 +211,13 @@ overwrite_prompt () {
     else
         return 0
     fi
+}
+
+check() {
+    echo "Checking SHA256 sums of files in ${1}"
+    pushd ${1} > /dev/null
+    shasum -c  ${ENCRYPTED%%/}/SHA256SUM
+    popd > /dev/null
 }
 
 encrypt() {
@@ -276,6 +283,10 @@ case "$COMMAND" in
         ;;
     mount)
         mountfs "${DECRYPTED}" ${SIZE}
+        ;;
+    check)
+        check "${ENCRYPTED}"
+        check "${DROPBOX}"
         ;;
     help)
         usage
