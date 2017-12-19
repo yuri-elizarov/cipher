@@ -114,6 +114,8 @@ mountfs() {
 }
 
 decrypt() {
+    dropbox_name=${DROPBOX%%/}/${PACKAGE}
+    package_base="${ENCRYPTED%%/}/${PACKAGE}"
     if [[ -z "${PACKAGE}" ]]; then
         echo "Missing package name." >&2
         usage
@@ -123,12 +125,17 @@ decrypt() {
         echo "${DECRYPTED} not mounted."
         exit 1
     fi
-    package_base="${ENCRYPTED%%/}/${PACKAGE}"
     if [[ -f "${package_base}.gpg" ]]; then
         file_name="${package_base}.gpg"
+        if ! cmp --quiet "${dropbox_name}.gpg" "${file_name}"; then
+            echo "WARNING: ${dropbox_name}.gpg and ${file_name} are not in sync"
+        fi
         $GPG --output "${DECRYPTED%%/}/${PACKAGE}" --decrypt "${file_name}"
     elif [[ -f "${package_base}.tar.gz.gpg" ]]; then
         file_name="${package_base}.tar.gz.gpg"
+        if ! cmp --quiet "${dropbox_name}.tar.gz.gpg" "${file_name}"; then
+            echo "WARNING: ${dropbox_name}.tar.gz.gpg and ${file_name} are not in sync"
+        fi
         $GPG --decrypt "${file_name}" | tar -x -z -C "${DECRYPTED}"
     else
         echo "Cannot find package ${PACKAGE}"
@@ -150,7 +157,7 @@ umountfs_mac ()
         echo "Disk image is not mounted." >&2
         exit 1
     fi
-
+    find "${mount_point}"/ -type f -exec gshred -z {} \; || /bin/true 
     umount "${mount_point}"
     if [ $? -ne 0 ]; then
         echo "Could not unmount." >&2
