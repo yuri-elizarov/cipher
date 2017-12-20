@@ -214,9 +214,22 @@ overwrite_prompt () {
 }
 
 check() {
-    echo "Checking SHA256 sums of files in ${1}"
+    echo -n "Checking SHA256 sums of files in ${1}... "
     pushd ${1} > /dev/null
-    shasum -s -c  ${ENCRYPTED%%/}/SHA256SUM
+    set +e
+    if shasum -s -c ${ENCRYPTED%%/}/SHA256SUM; then
+        echo "passed"
+    else
+        echo "failed!"
+    fi
+    set -e
+    popd > /dev/null
+}
+
+sum() {
+    echo "Calculating SHA256 sums"
+    pushd ${ENCRYPTED} > /dev/null
+    shasum -a 256 -b *.enc *.gpg > SHA256SUM
     popd > /dev/null
 }
 
@@ -287,6 +300,9 @@ case "$COMMAND" in
     check)
         check "${ENCRYPTED}"
         check "${DROPBOX}"
+        ;;
+    sum)
+        sum
         ;;
     help)
         usage
